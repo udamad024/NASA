@@ -52,12 +52,88 @@ locals {
 # - end 
 
 
-#jun instances
+# Bastion host
+resource "aws_instance" "bastion_host" {
+  ami                    = data.aws_ami.latest_amazon_linux.id
+  instance_type          = var.instance_type
+  subnet_id              = data.terraform_remote_state.public_subnet.outputs.public_subnet_ids[1] # Choose the second public subnet
+  key_name               = aws_key_pair.Assignment.key_name
+  security_groups     = [aws_security_group.bastion_sg.id]
+  associate_public_ip_address = true
 
+  tags = merge(local.default_tags,
+    {
+      "Name" = "Webserver2"
+    }
+  )
+}
 
-# - end
+# VMs in private subnets
+resource "aws_instance" "vm_instances" {
+  count                  = length(data.terraform_remote_state.public_subnet.outputs.private_subnets_ids)
+  ami                    = data.aws_ami.latest_amazon_linux.id
+  instance_type          = var.instance_type
+  subnet_id              = data.terraform_remote_state.public_subnet.outputs.private_subnets_ids[count.index]
+  key_name               = aws_key_pair.Assignment.key_name
+  security_groups        = [aws_security_group.vm_sg.id]
 
+  tags = merge(local.default_tags,
+    {
+      "Name" = "${var.prefix}-private-${count.index + 5}"
+    }
+  )
+}
 
+resource "aws_security_group" "bastion_sg" {
+  vpc_id = data.terraform_remote_state.public_subnet.outputs.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create security group for VMs
+resource "aws_security_group" "vm_sg" {
+  vpc_id = data.terraform_remote_state.public_subnet.outputs.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
 
 #Application LB
