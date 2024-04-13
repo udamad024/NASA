@@ -18,3 +18,6 @@ aws configure set aws_session_token <your_aws_Session_token>
 
 Now you can deploy terraform resouces to your aws account. 
 
+terraform init 
+
+terraform apply
