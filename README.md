@@ -1,6 +1,6 @@
 # ACS-Team Project
 
-To Deploy the Terraform components.
+1. To Deploy the Terraform components.
 
 first configure the aws access key in your terminal(if you are using vscode it is easier, go to /network folder and open a terminal and do this) - 
 
@@ -21,3 +21,7 @@ Now you can deploy terraform resouces to your aws account.
 terraform init 
 
 terraform apply
+
+2. To run the Ansible code, issue the following command:
+
+   ansible-playbook -i aws_ec2.yaml  playbook.yaml
