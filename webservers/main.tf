@@ -64,11 +64,12 @@ resource "aws_instance" "acs73026" {
   tags = merge(
     local.default_tags,
     {
-      "Name" = "Webserver ${count.index + 1}",
+      "Name" = "Webserver ${count.index == 0 ? 1 : count.index + 2}",
       "WebServerGroup" = count.index >= 1 ? "Ansible" : ""
     }
   )
 }
+
 
 
 
