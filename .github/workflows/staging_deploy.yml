@@ -154,15 +154,18 @@ jobs:
         working-directory: ./webservers
 
       - name: Terraform Plan webservers
+        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
         id: plan1
         run: terraform plan -input=false -no-color -out tf.plan
         working-directory: ./webservers # Use your environment folder
         continue-on-error: true
 
       - name: Get result webservers
+        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
         run: echo "${{ steps.validate.outputs.stdout }}"
 
       - name: Terraform Show webservers
+        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
         id: show1
         run: terraform show -no-color tf.plan 2>&1 > /tmp/plan.txt
         working-directory: ./webservers # Use your environment folder
