@@ -54,12 +54,9 @@ resource "aws_instance" "acs73026" {
   instance_type               = var.instance_type
   key_name                    = aws_key_pair.Assignment.key_name
   security_groups             = [aws_security_group.acs730w7.id]
-  subnet_id                   = element(
-                                  data.terraform_remote_state.public_subnet.outputs.public_subnet_ids,
-                                  (count.index + (count.index >= 1 ? 1 : 0))
-                                )
+  subnet_id                   = element(data.terraform_remote_state.public_subnet.outputs.public_subnet_ids, count.index)
   associate_public_ip_address = true
-  user_data = file("${path.module}/install_httpd.sh")
+  user_data                   = count.index == 0 ? file("${path.module}/install_httpd.sh") : null
   lifecycle {
     create_before_destroy = true
   }
@@ -67,11 +64,12 @@ resource "aws_instance" "acs73026" {
   tags = merge(
     local.default_tags,
     {
-      "Name" = "Webserver ${count.index == 0 ? 1 : (count.index == 1 ? 3 : 4)}",
+      "Name" = "Webserver ${count.index + 1}",
       "WebServerGroup" = count.index >= 1 ? "Ansible" : ""
     }
   )
 }
+
 
 
 # Adding SSH  key to instance
