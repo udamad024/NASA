@@ -306,12 +306,12 @@ resource "aws_lb_listener" "http_listener" {
 
 # Attach instance 1 (index 0)
 # Attach instances 1 and 3 to target group tg1
-#resource "aws_lb_target_group_attachment" "tg1_attach" {
-#  count            = 2
-#  target_group_arn = aws_lb_target_group.tg1.arn
-#  target_id        = aws_instance.acs73026[count.index].id
-#  port             = 80
-#}
+resource "aws_lb_target_group_attachment" "tg1_attach" {
+  count            = 2
+  target_group_arn = aws_lb_target_group.tg1.arn
+  target_id        = aws_instance.acs73026[count.index].id
+  port             = 80
+}
 
 
 
