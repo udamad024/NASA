@@ -131,6 +131,7 @@ resource "aws_instance" "bastion_host" {
   subnet_id              = data.terraform_remote_state.public_subnet.outputs.public_subnet_ids[1] // Choose the second public subnet
   key_name               = aws_key_pair.Assignment.key_name // Use the AWS key pair from tf directory
   security_groups        = [aws_security_group.bastion_sg.id]
+  user_data = file("${path.module}/install_httpd.sh")
   associate_public_ip_address = true
 
   provisioner "file" {
