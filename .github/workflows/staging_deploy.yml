@@ -209,6 +209,6 @@ jobs:
 
       - name: Terraform Apply webservers
         if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
-        run: terraform apply -input=false tf1.plan
+        run: terraform apply -input=false tf2.plan
         working-directory: ./webservers # Use your environment folder
         shell: bash
