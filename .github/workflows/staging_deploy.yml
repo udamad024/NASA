@@ -1,0 +1,214 @@
+name: "Terraform - Staging"
+# https://gaunacode.com/deploying-terraform-at-scale-with-github-actions
+on:
+  push:
+    branches:
+    - prod
+    paths:
+    - network/**
+    - webservers/**
+
+  pull_request:
+    branches:
+    - prod
+    paths: 
+    - network/**
+    - webservers/**
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform-network:
+    name: "Terraform Network"
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AWS_ACCESS_KEY_ID:  ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN:  ${{ secrets.AWS_SESSION_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.9
+          terraform_wrapper: true
+
+      - name: Terraform fmt network
+        id: fmt1
+        run: terraform fmt 
+        continue-on-error: true
+        working-directory: ./network
+
+      - name: Terraform Init network
+        id: init1
+        run: terraform init
+        working-directory: ./network
+
+      - name: Terraform Validate network
+        id: validate1
+        run: terraform validate -no-color
+        working-directory: ./network
+
+      - name: Terraform Plan network
+        id: plan1
+        run: terraform plan -input=false -no-color -out tf1.plan
+        working-directory: ./network # Use your environment folder
+        continue-on-error: true
+
+      - name: Get result network
+        run: echo "${{ steps.validate.outputs.stdout }}"
+
+      - name: Terraform Show network
+        id: show1
+        run: terraform show -no-color tf1.plan 2>&1 > /tmp/plan1.txt
+        working-directory: ./network # Use your environment folder
+          
+      - uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const plan = fs.readFileSync("/tmp/plan1.txt", "utf8");
+            const maxGitHubBodyCharacters = 65536;
+
+            function chunkSubstr(str, size) {
+              const numChunks = Math.ceil(str.length / size)
+              const chunks = new Array(numChunks)
+              for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+                chunks[i] = str.substr(o, size)
+              }
+              return chunks
+            }
+
+            // Split the Terraform plan into chunks if it's too big and can't fit into the GitHub Action
+            var plans = chunkSubstr(plan, maxGitHubBodyCharacters); 
+            for (let i = 0; i < plans.length; i++) {
+              const output = `### ${{ inputs.plan-title }} Part # ${i + 1}
+              #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+              #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+              #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+              <details><summary>Show Plan</summary>
+              \`\`\`\n
+              ${plans[i]}
+              \`\`\`
+              </details>
+              *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ inputs.working-directory }}\`, Workflow: \`${{ github.workflow }}\`*`;   
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            }
+
+      - name: Terraform Apply network
+        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
+        run: terraform apply -input=false tf1.plan
+        working-directory: ./network # Use your environment folder
+        shell: bash
+
+  terraform-webservers:
+    needs: terraform-network
+    name: "Terraform webservers"
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      AWS_ACCESS_KEY_ID:  ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN:  ${{ secrets.AWS_SESSION_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.9
+          terraform_wrapper: true
+
+      - name: Terraform fmt webservers
+        id: fmt1
+        run: terraform fmt 
+        continue-on-error: true
+        working-directory: ./webservers
+
+      - name: Terraform Init webservers
+        id: init1
+        run: terraform init
+        working-directory: ./webservers
+
+      - name: Terraform Validate webservers
+        id: validate1
+        run: terraform validate -no-color
+        working-directory: ./webservers
+
+      - name: Terraform Plan webservers
+        id: plan1
+        run: terraform plan -input=false -no-color -out tf2.plan
+        working-directory: ./webservers # Use your environment folder
+        continue-on-error: true
+
+      - name: Get result webservers
+        run: echo "${{ steps.validate.outputs.stdout }}"
+
+      - name: Terraform Show webservers
+        id: show1
+        run: terraform show -no-color tf2.plan 2>&1 > /tmp/plan2.txt
+        working-directory: ./webservers # Use your environment folder
+          
+      - uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const plan = fs.readFileSync("/tmp/plan2.txt", "utf8");
+            const maxGitHubBodyCharacters = 65536;
+
+            function chunkSubstr(str, size) {
+              const numChunks = Math.ceil(str.length / size)
+              const chunks = new Array(numChunks)
+              for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+                chunks[i] = str.substr(o, size)
+              }
+              return chunks
+            }
+
+            // Split the Terraform plan into chunks if it's too big and can't fit into the GitHub Action
+            var plans = chunkSubstr(plan, maxGitHubBodyCharacters); 
+            for (let i = 0; i < plans.length; i++) {
+              const output = `### ${{ inputs.plan-title }} Part # ${i + 1}
+              #### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+              #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+              #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+              <details><summary>Show Plan</summary>
+              \`\`\`\n
+              ${plans[i]}
+              \`\`\`
+              </details>
+              *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ inputs.working-directory }}\`, Workflow: \`${{ github.workflow }}\`*`;   
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+            }
+
+      - name: Terraform Apply webservers
+        if: github.ref == 'refs/heads/prod' && github.event_name == 'push'
+        run: terraform apply -input=false tf1.plan
+        working-directory: ./webservers # Use your environment folder
+        shell: bash
