@@ -124,13 +124,26 @@ resource "aws_security_group" "acs730w7" {
 
 
 # Bastion host
+
 resource "aws_instance" "bastion_host" {
   ami                    = data.aws_ami.latest_amazon_linux.id
   instance_type          = var.instance_type
-  subnet_id              = data.terraform_remote_state.public_subnet.outputs.public_subnet_ids[1] # Choose the second public subnet
-  key_name               = aws_key_pair.Assignment.key_name
-  security_groups     = [aws_security_group.bastion_sg.id]
+  subnet_id              = data.terraform_remote_state.public_subnet.outputs.public_subnet_ids[1] // Choose the second public subnet
+  key_name               = aws_key_pair.Assignment.key_name // Use the AWS key pair from tf directory
+  security_groups        = [aws_security_group.bastion_sg.id]
+  user_data = file("${path.module}/install_httpd.sh")
   associate_public_ip_address = true
+
+  provisioner "file" {
+    source      = "Prod" // Assuming your private key file is named as env.pem
+    destination = "/home/ec2-user/Prod" // Destination path on the instance
+    connection {
+      type        = "ssh"
+      user        = "ec2-user" // or the appropriate user for your AMI
+      private_key = file("Prod") // Path to the private key file on your local machine
+      host        = self.public_ip // Public IP of the instance
+    }
+  }
 
   tags = merge(local.default_tags,
     {
@@ -138,6 +151,7 @@ resource "aws_instance" "bastion_host" {
     }
   )
 }
+
 
 # VMs in private subnets
 resource "aws_instance" "vm_instances" {
@@ -306,12 +320,12 @@ resource "aws_lb_listener" "http_listener" {
 
 # Attach instance 1 (index 0)
 # Attach instances 1 and 3 to target group tg1
-#resource "aws_lb_target_group_attachment" "tg1_attach" {
-#  count            = 2
-#  target_group_arn = aws_lb_target_group.tg1.arn
-#  target_id        = aws_instance.acs73026[count.index].id
-#  port             = 80
-#}
+resource "aws_lb_target_group_attachment" "tg1_attach" {
+  count            = 2
+  target_group_arn = aws_lb_target_group.tg1.arn
+  target_id        = aws_instance.acs73026[count.index].id
+  port             = 80
+}
 
 
 
