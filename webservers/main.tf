@@ -23,7 +23,7 @@ data "terraform_remote_state" "public_subnet" { // This is to use Outputs from R
     region = "us-east-1"                     // Region where bucket created
   }
 }
-
+#asd
 # Data source for AMI id
 data "aws_ami" "latest_amazon_linux" {
   owners      = ["amazon"]
