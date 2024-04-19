@@ -14,6 +14,10 @@
 
    aws configure set aws_session_token <your_aws_Session_token>
 
+   update ./network/config.tf and ./webserver/config.tf to change the S3 bucket name where the terraform statefile will be saved
+ 
+   also update ./webserver/main.tf to change the S3 bucket name under data "terraform_remote_state"
+
    Now you can deploy terraform resouces to your aws account. 
 
    terraform init 
