@@ -28,3 +28,5 @@
 2. To run the Ansible code, issue the following command:
 
    ansible-playbook -i aws_ec2.yaml  playbook.yaml
+
+<img width="1690" alt="image" src="https://github.com/user-attachments/assets/16ae510a-b821-45c3-be8d-59a4d3232c7e" />
